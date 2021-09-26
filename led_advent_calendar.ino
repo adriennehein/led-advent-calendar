@@ -1,4 +1,3 @@
-
 #include <Adafruit_NeoPixel.h>
 
 #ifdef __AVR__
@@ -19,20 +18,19 @@ const int LED_PIN    = 6; // Connect the LED to pin 6 or change here
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(50, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 boolean oldState = HIGH;
-int     mode     = 0; 
+int PIXEL_INDEX = 0;
+int BTN_COUNT = 0;
 
 void setup() {
-  // initiate serial communication
-  Serial.begin(9600);
-  
   pinMode(BUTTON_PIN, INPUT_PULLUP); // set arduino pin to input pull-up mode
 
-  strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
+  strip.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
+  strip.show(); // Turn OFF all pixels ASAP
 
 }
 
 void loop() {
+
   // Get current button state.
   boolean newState = digitalRead(BUTTON_PIN);
     // Check if state changed from high to low (button press).
@@ -42,33 +40,20 @@ void loop() {
     // Check if button is still low after debounce.
     newState = digitalRead(BUTTON_PIN);
     if(newState == LOW) {      // Yes, still low
-      if(++mode > 8) mode = 0; // Advance to next mode, wrap around after #8
-      switch(mode) {           // Start the new animation...
+        if (BTN_COUNT < 25) {
+            colorWipe(strip.Color( 127,   127,   0), 50); 
 
-        case 1:
-          colorWipe(strip.Color( 255,   204,   102), 50);    // Red
-          break;
-        case 2:
-          colorWipe(strip.Color(  0, 255,   0), 50);    // Green
-          break;
-        case 3:
-          colorWipe(strip.Color(  0,   0, 255), 50);    // Blue
-          break;
-        case 4:
-          theaterChase(strip.Color(127, 127, 127), 50); // White
-          break;
-        case 5:
-          theaterChase(strip.Color(127,   0,   0), 50); // Red
-          break;
-        case 6:
-          theaterChase(strip.Color(  0,   0, 127), 50); // Blue
-          break;
-        case 7:
-          rainbow(10);
-          break;
+//          pixels.setPixelColor(PIXEL_INDEX, pixels.Color( 255,   204,   102));
+//          pixels.show();  // Send the updated pixel colors to the hardware.
+          PIXEL_INDEX = PIXEL_INDEX + 2; // increment two to light up every even indexed light
+          BTN_COUNT = BTN_COUNT + 1; // incrememnt btn presses to determine when 25 is reached for XMAS;
+        }
+        if (BTN_COUNT == 25) {
+           colorWipe(strip.Color( 255,   0,   0), 50); 
+        }
       }
     }
-  }
+ 
   // Set the last-read button state to the old state.
   oldState = newState;
 }
@@ -77,7 +62,7 @@ void loop() {
 
 // Fill the dots one after the other with a color
 void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
+  for(uint16_t i=0; i<PIXEL_INDEX; i = i+2) {
       strip.setPixelColor(i, c);
       strip.show();
       delay(wait);
@@ -85,46 +70,47 @@ void colorWipe(uint32_t c, uint8_t wait) {
 }
 
 
+
 // Theater-marquee-style chasing lights. Pass in a color (32-bit value,
 // a la strip.Color(r,g,b) as mentioned above), and a delay time (in ms)
 // between frames.
-void theaterChase(uint32_t color, int wait) {
-  for(int a=0; a<10; a++) {  // Repeat 10 times...
-    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
-      strip.clear();         //   Set all pixels in RAM to 0 (off)
-      // 'c' counts up from 'b' to end of strip in steps of 3...
-      for(int c=b; c<strip.numPixels(); c += 3) {
-        strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
-      }
-      strip.show(); // Update strip with new contents
-      delay(wait);  // Pause for a moment
-    }
-  }
-}
+//void theaterChase(uint32_t color, int wait) {
+//  for(int a=0; a<10; a++) {  // Repeat 10 times...
+//    for(int b=0; b<3; b++) { //  'b' counts from 0 to 2...
+//      strip.clear();         //   Set all pixels in RAM to 0 (off)
+//      // 'c' counts up from 'b' to end of strip in steps of 3...
+//      for(int c=b; c<strip.numPixels(); c += 3) {
+//        strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
+//      }
+//      strip.show(); // Update strip with new contents
+//      delay(wait);  // Pause for a moment
+//    }
+//  }
+//}
 
 // Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
-void rainbow(int wait) {
-  // Hue of first pixel runs 3 complete loops through the color wheel.
-  // Color wheel has a range of 65536 but it's OK if we roll over, so
-  // just count from 0 to 3*65536. Adding 256 to firstPixelHue each time
-  // means we'll make 3*65536/256 = 768 passes through this outer loop:
-  for(long firstPixelHue = 0; firstPixelHue < 3*65536; firstPixelHue += 256) {
-    for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
-      // Offset pixel hue by an amount to make one full revolution of the
-      // color wheel (range of 65536) along the length of the strip
-      // (strip.numPixels() steps):
-      int pixelHue = firstPixelHue + (i * 65536L / strip.numPixels());
-      // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
-      // optionally add saturation and value (brightness) (each 0 to 255).
-      // Here we're using just the single-argument hue variant. The result
-      // is passed through strip.gamma32() to provide 'truer' colors
-      // before assigning to each pixel:
-      strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
-    }
-    strip.show(); // Update strip with new contents
-    delay(wait);  // Pause for a moment
-  }
-}
+//void rainbow(int wait) {
+//  // Hue of first pixel runs 3 complete loops through the color wheel.
+//  // Color wheel has a range of 65536 but it's OK if we roll over, so
+//  // just count from 0 to 3*65536. Adding 256 to firstPixelHue each time
+//  // means we'll make 3*65536/256 = 768 passes through this outer loop:
+//  for(long firstPixelHue = 0; firstPixelHue < 3*65536; firstPixelHue += 256) {
+//    for(int i=0; i<strip.numPixels(); i++) { // For each pixel in strip...
+//      // Offset pixel hue by an amount to make one full revolution of the
+//      // color wheel (range of 65536) along the length of the strip
+//      // (strip.numPixels() steps):
+//      int pixelHue = firstPixelHue + (i * 65536L / strip.numPixels());
+//      // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
+//      // optionally add saturation and value (brightness) (each 0 to 255).
+//      // Here we're using just the single-argument hue variant. The result
+//      // is passed through strip.gamma32() to provide 'truer' colors
+//      // before assigning to each pixel:
+//      strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
+//    }
+//    strip.show(); // Update strip with new contents
+//    delay(wait);  // Pause for a moment
+//  }
+//}
 
 // Rainbow-enhanced theater marquee. Pass delay time (in ms) between frames.
 //void theaterChaseRainbow(int wait) {
@@ -150,14 +136,14 @@ void rainbow(int wait) {
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
-uint32_t Wheel(byte WheelPos) {
-  if(WheelPos < 85) {
-   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-  } else if(WheelPos < 170) {
-   WheelPos -= 85;
-   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-  } else {
-   WheelPos -= 170;
-   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-  }
-}
+//uint32_t Wheel(byte WheelPos) {
+//  if(WheelPos < 85) {
+//   return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+//  } else if(WheelPos < 170) {
+//   WheelPos -= 85;
+//   return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
+//  } else {
+//   WheelPos -= 170;
+//   return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
+//  }
+//}
